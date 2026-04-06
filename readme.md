@@ -2,6 +2,18 @@
 
 Six variants of a LangGraph-based Foundry hosted agent, each demonstrating a different feature. All share the same core: plan_node → llm_call → tools loop, `get_stream_writer()` custom events, `version="v2"` streaming, `agent_session_id` container affinity, App Insights logging, and a Streamlit UI.
 
+## Prerequisites
+
+These examples run on the new Foundry hosted agent backend (private preview). Before using anything in this repo you need:
+
+1. **Clone the private preview repo** and run the setup:
+   ```bash
+   gh repo clone microsoft/hosted-agents-vnext-private-preview
+   cd hosted-agents-vnext-private-preview
+   .\install.ps1          # installs uv + foundry-agent CLI
+   ./setup-environment.sh # provisions AI Services, ACR, App Insights, RBAC
+   ```
+
 ## Comparison Table
 
 | Directory | Tools | Interrupt | Plan Filtering | Protocol | Key Concept |
@@ -35,27 +47,6 @@ Six variants of a LangGraph-based Foundry hosted agent, each demonstrating a dif
 - **Standard SSE** (5 variants): Events include `message_chunk`, `node_update`, `tool_result`, `custom`, `done`.
 - **AG-UI** (`mcp_approval_ag-ui`): Events translated to `RUN_STARTED`, `TEXT_MESSAGE_CONTENT`, `TOOL_CALL_START`, `TOOL_CALL_RESULT`, `CUSTOM`, `RUN_FINISHED`, etc.
 
-## Common Commands
-
-All variants follow the same workflow:
-
-```bash
-# Deploy (always creates a fresh agent with unique hash suffix)
-python deploy.py
-
-# Test (auto-updated by deploy.py with the new agent name)
-python test_remote.py
-
-# Query App Insights logs
-python query_logs.py                    # traces, last 2h
-python query_logs.py --type exceptions  # exceptions
-python query_logs.py --type all         # both
-python query_logs.py --since 6h         # custom time range
-
-# Run Streamlit UI
-cd ui && streamlit run app.py
-```
-
 ## File Structure (each variant)
 
 ```
@@ -66,6 +57,51 @@ deploy.py           # Docker build + push + fresh agent creation
 test_remote.py      # Automated 2-turn test against deployed agent
 query_logs.py       # App Insights log querying via az rest
 Dockerfile          # Python 3.12-slim container
-requirements.txt    # Python dependencies
+requirements.txt    # Python dependencies (private-preview Azure SDK)
+requirements-public.txt  # Public dependencies (if present — LangGraph, LangChain, etc.)
 ui/app.py           # Streamlit chat UI
+ui/requirements.txt # UI dependencies
+.env.example        # Environment variable template
+```
+
+## Environment Setup
+
+Each variant (and its `ui/` subfolder) needs its own virtual environment. Copy `.env.example` to `.env` and fill in your values, then from the variant's directory:
+
+```bash
+# Agent venv
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+pip install -r requirements-public.txt   # if present
+
+# UI venv (from the ui/ folder)
+cd ui
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+`requirements.txt` contains the private-preview Azure SDK packages (from the Azure DevOps feed). `requirements-public.txt` (present in MCP variants) contains the publicly available dependencies.
+
+## Common Commands
+
+All variants follow the same workflow. Activate the agent `.venv` first:
+
+```bash
+# With agent .venv activated:
+python deploy.py                        # deploy (creates a fresh agent with unique hash suffix)
+python test_remote.py                   # test (auto-updated by deploy.py with new agent name)
+python query_logs.py                    # traces, last 2h
+python query_logs.py --type exceptions  # exceptions
+python query_logs.py --type all         # both
+python query_logs.py --since 6h         # custom time range
+```
+
+For the Streamlit UI, activate the `ui/.venv` instead:
+
+```bash
+# With ui/.venv activated:
+cd ui
+streamlit run app.py
 ```

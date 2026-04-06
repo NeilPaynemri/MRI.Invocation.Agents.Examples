@@ -31,13 +31,39 @@ if metadata.get("langgraph_node") == "plan_node":
 chunk_data = {k: v for k, v in chunk_data.items() if k != "plan_node"}
 ```
 
+## Environment Setup
+
+Copy `.env.example` to `.env` and fill in your values. Then create separate virtual environments for the agent and the UI:
+
+```bash
+# Agent venv
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+pip install -r requirements-public.txt   # if present
+
+# UI venv (from the ui/ folder)
+cd ui
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
 ## How to Use
+
+With the agent `.venv` activated:
 
 ```bash
 python deploy.py
 python test_remote.py
 python query_logs.py
-cd ui && streamlit run app.py
+```
+
+For the Streamlit UI, activate the `ui/.venv` instead:
+
+```bash
+cd ui
+streamlit run app.py
 ```
 
 ## Key Difference from Other Variants

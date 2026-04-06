@@ -24,13 +24,41 @@ plan_node → llm_call ──INTERRUPT──> (client approves/denies) → tools
 4. Client sends approval: `{"approve": true, "thread_id": "..."}`
 5. If approved, tools execute normally; if denied, a synthetic `ToolMessage("User denied tool execution")` is injected and the LLM responds accordingly
 
+## Environment Setup
+
+Copy `.env.example` to `.env` and fill in your values. Then create separate virtual environments for the agent and the UI:
+
+```bash
+# Agent venv
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+pip install -r requirements-public.txt
+
+# UI venv (from the ui/ folder)
+cd ui
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+`requirements.txt` contains the private-preview Azure SDK packages (from the Azure DevOps feed). `requirements-public.txt` contains the publicly available dependencies (LangGraph, LangChain, etc.).
+
 ## How to Use
+
+With the agent `.venv` activated:
 
 ```bash
 python deploy.py
 python test_remote.py
 python query_logs.py
-cd ui && streamlit run app.py
+```
+
+For the Streamlit UI, activate the `ui/.venv` instead:
+
+```bash
+cd ui
+streamlit run app.py
 ```
 
 ## Key Difference from Other Variants

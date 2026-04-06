@@ -17,22 +17,41 @@ The simplest full example. Local tools, no interrupts, no filtering — everythi
 plan_node → llm_call → tools → llm_call → ... → done
 ```
 
-## How to Use
+## Environment Setup
+
+Copy `.env.example` to `.env` and fill in your values. Then create separate virtual environments for the agent and the UI:
 
 ```bash
-# Deploy (always creates a fresh agent with unique hash suffix)
-python deploy.py
+# Agent venv
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+pip install -r requirements-public.txt   # if present
 
-# Test
-python test_remote.py
+# UI venv (from the ui/ folder)
+cd ui
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-# Query App Insights logs
+## How to Use
+
+With the agent `.venv` activated:
+
+```bash
+python deploy.py                        # deploy (creates a fresh agent with unique hash suffix)
+python test_remote.py                   # test
 python query_logs.py                    # traces, last 2h
 python query_logs.py --type all         # traces + exceptions
 python query_logs.py --since 6h         # custom time range
+```
 
-# Run Streamlit UI
-cd ui && streamlit run app.py
+For the Streamlit UI, activate the `ui/.venv` instead:
+
+```bash
+cd ui
+streamlit run app.py
 ```
 
 ## Key Difference from Other Variants

@@ -24,13 +24,39 @@ plan_node → llm_call → tools → llm_call → style_check ──INTERRUPT─
 4. Client resumes with the user's choice via `Command(resume=value)`
 5. `style_rewrite` node reformats the answer in the chosen style
 
+## Environment Setup
+
+Copy `.env.example` to `.env` and fill in your values. Then create separate virtual environments for the agent and the UI:
+
+```bash
+# Agent venv
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+pip install -r requirements-public.txt   # if present
+
+# UI venv (from the ui/ folder)
+cd ui
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
 ## How to Use
+
+With the agent `.venv` activated:
 
 ```bash
 python deploy.py
 python test_remote.py
 python query_logs.py
-cd ui && streamlit run app.py
+```
+
+For the Streamlit UI, activate the `ui/.venv` instead:
+
+```bash
+cd ui
+streamlit run app.py
 ```
 
 ## Key Difference from Other Variants
