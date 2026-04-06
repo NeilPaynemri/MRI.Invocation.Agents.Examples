@@ -14,6 +14,8 @@ These examples run on the new Foundry hosted agent backend (private preview). Be
    ./setup-environment.sh # provisions AI Services, ACR, App Insights, RBAC
    ```
 
+---
+
 ## Comparison Table
 
 | Directory | Tools | Interrupt | Plan Filtering | Protocol | Key Concept |
@@ -24,6 +26,8 @@ These examples run on the new Foundry hosted agent backend (private preview). Be
 | `invoketest1_mcp_approval` | MCP (remote calculator) | `interrupt_before=["tools"]` | No | SSE | **Tool approval gate** — client approves/denies before execution |
 | `invoketest1_mcp_approval_ag-ui` | MCP (remote calculator) | `interrupt_before=["tools"]` | No | **AG-UI** | **AG-UI protocol** — approval flow with AG-UI event translation |
 | `invoketest1_mcp_noapproval` | MCP (remote calculator) | None | No | SSE | **MCP without gating** — tools execute automatically |
+
+---
 
 ## Feature Details
 
@@ -161,6 +165,8 @@ RUN_STARTED
 RUN_FINISHED
 ```
 
+---
+
 ## File Structure (each variant)
 
 ```
@@ -177,6 +183,8 @@ ui/app.py           # Streamlit chat UI
 ui/requirements.txt # UI dependencies
 .env.example        # Environment variable template
 ```
+
+---
 
 ## Environment Setup
 
@@ -197,6 +205,8 @@ pip install -r requirements.txt
 ```
 
 `requirements.txt` contains the private-preview Azure SDK packages (from the Azure DevOps feed). `requirements-public.txt` (present in MCP variants) contains the publicly available dependencies.
+
+---
 
 ## Common Commands
 
