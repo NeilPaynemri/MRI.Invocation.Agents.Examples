@@ -90,7 +90,72 @@ Fires from `get_stream_writer()` calls inside graph nodes. Free-form dicts for U
 
 #### AG-UI protocol (`mcp_approval_ag-ui` only)
 
-Translates the above into AG-UI events: `RUN_STARTED`, `TEXT_MESSAGE_CONTENT`, `TOOL_CALL_START`, `TOOL_CALL_ARGS`, `TOOL_CALL_END`, `TOOL_CALL_RESULT`, `CUSTOM`, `RUN_FINISHED`, etc.
+Instead of the SSE event types above, this variant translates LangGraph's stream into [AG-UI protocol](https://docs.ag-ui.com) events. The same three stream modes (`messages`, `updates`, `custom`) are consumed internally, but the client sees AG-UI typed events.
+
+**Lifecycle events**
+
+| AG-UI event | When |
+|-------------|------|
+| `RUN_STARTED` | Stream begins — includes `threadId` and `runId` |
+| `RUN_FINISHED` | Stream complete (also sent when pausing for approval — the run is "finished" and the client POSTs again to resume) |
+| `RUN_ERROR` | Exception or cancellation |
+
+**Step tracking**
+
+| AG-UI event | When |
+|-------------|------|
+| `STEP_STARTED` | A graph node begins executing (`stepName`: `plan_node`, `llm_call`, `tools`) |
+| `STEP_FINISHED` | That node has completed |
+
+**Text streaming (from `messages` stream — `AIMessageChunk` with content)**
+
+| AG-UI event | Key fields | When |
+|-------------|------------|------|
+| `TEXT_MESSAGE_START` | `messageId`, `role: "assistant"` | First text content chunk from the LLM |
+| `TEXT_MESSAGE_CONTENT` | `messageId`, `delta` | Each subsequent text token |
+| `TEXT_MESSAGE_END` | `messageId` | LLM finished this message (closed when the full `AIMessage` arrives in `updates`) |
+
+**Tool calls (from `messages` stream — `AIMessageChunk` with `tool_call_chunks`)**
+
+| AG-UI event | Key fields | When |
+|-------------|------------|------|
+| `TOOL_CALL_START` | `toolCallId`, `toolCallName` | First chunk of a tool call — the LLM has decided to call a tool (carries the tool name) |
+| `TOOL_CALL_ARGS` | `toolCallId`, `delta` | Streaming argument tokens (JSON string fragments) |
+| `TOOL_CALL_END` | `toolCallId` | Full `AIMessage` arrived in `updates` confirming all args are complete |
+
+**Tool results (from `updates` stream — `ToolMessage`)**
+
+| AG-UI event | Key fields | When |
+|-------------|------------|------|
+| `TOOL_CALL_RESULT` | `toolCallId`, `content`, `role: "tool"` | Tool executed and returned a value |
+
+**Custom / approval**
+
+| AG-UI event | Key fields | When |
+|-------------|------------|------|
+| `CUSTOM` (`name: "node_status"`) | `value: {status, node, detail}` | Progress from `get_stream_writer()` (planning, thinking, tool_running, etc.) |
+| `CUSTOM` (`name: "approval_required"`) | `value: {tool_calls[], thread_id}` | Graph hit `interrupt_before=["tools"]` — client should POST back with `{"approve": true/false}` to resume |
+
+**Typical tool-calling flow with approval:**
+
+```
+RUN_STARTED
+  STEP_STARTED (plan_node)
+    TEXT_MESSAGE_START → TEXT_MESSAGE_CONTENT* → TEXT_MESSAGE_END
+  STEP_FINISHED (plan_node)
+  STEP_STARTED (llm_call)
+    TOOL_CALL_START → TOOL_CALL_ARGS* → TOOL_CALL_END
+    CUSTOM (approval_required)
+RUN_FINISHED                          ← client sends approve=true →
+RUN_STARTED
+  STEP_STARTED (tools)
+    TOOL_CALL_RESULT
+  STEP_FINISHED (tools)
+  STEP_STARTED (llm_call)
+    TEXT_MESSAGE_START → TEXT_MESSAGE_CONTENT* → TEXT_MESSAGE_END
+  STEP_FINISHED (llm_call)
+RUN_FINISHED
+```
 
 ## File Structure (each variant)
 
