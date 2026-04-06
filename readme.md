@@ -77,6 +77,10 @@ Fires from `get_stream_writer()` calls inside graph nodes. Free-form dicts for U
 |-----------|---------------|------|
 | `custom` | `status`, `node`, `detail` | Node emits progress. Examples: `{"status": "planning", "node": "plan_node", ...}`, `{"status": "tool_running", "node": "tools", "detail": "Calling add({a: 12, b: 8})"}` |
 
+#### Stream mode: `values` (not used in these examples)
+
+LangGraph also supports a `values` stream mode which emits the **entire graph state** after every node executes. If you added `"values"` to the `stream_mode` list, each chunk would contain the full `messages` array (all messages accumulated so far) rather than just the delta. This is useful for debugging or UIs that want to re-render the complete conversation after each step, but it's verbose — the payload grows with every turn. These examples use `updates` instead, which gives per-node deltas without repeating the full history.
+
 #### Control events (outside the stream loop)
 
 | SSE event | When |
