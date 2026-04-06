@@ -42,10 +42,55 @@ These examples run on the new Foundry hosted agent backend (private preview). Be
 
 - Only `invoketest1_localtools_skipplannode` filters plan_node messages from the SSE stream using `metadata.get("langgraph_node")`. Custom events (planning/plan_complete) still flow for the thoughts panel.
 
-### Protocol
+### Protocol & SSE Events
 
-- **Standard SSE** (5 variants): Events include `message_chunk`, `node_update`, `tool_result`, `custom`, `done`.
-- **AG-UI** (`mcp_approval_ag-ui`): Events translated to `RUN_STARTED`, `TEXT_MESSAGE_CONTENT`, `TOOL_CALL_START`, `TOOL_CALL_RESULT`, `CUSTOM`, `RUN_FINISHED`, etc.
+All variants stream via `graph.astream()` with `stream_mode=["messages", "updates", "custom"]` and `version="v2"`. Each chunk has a `type` (`"messages"`, `"updates"`, or `"custom"`) that determines which SSE events it produces. The AG-UI variant translates these into a different event set.
+
+#### Stream mode: `messages`
+
+Fires for every LangChain message object (chunks during streaming, full messages at end).
+
+| SSE event | Source object | Key fields | When |
+|-----------|--------------|------------|------|
+| `message_chunk` | `AIMessageChunk` | `node`, `content`, `tool_calls[]` | LLM is streaming text **or** deciding to call a tool. Tool calls appear as a `tool_calls` array on the chunk — there is no separate "tool_call" event. |
+| `tool_result` | `ToolMessage` | `node`, `content`, `tool_call_id` | A tool has executed. `tool_call_id` links back to the `id` in the originating `message_chunk.tool_calls[]`. |
+| `message` | `AIMessage` (non-chunk) | `node`, `content`, `tool_calls[]` | Complete AI message (less common in streaming — typically you see `message_chunk` instead). |
+
+A typical tool-calling sequence:
+1. `message_chunk` with `tool_calls: [{id: "call_123", name: "add", args: {a: 12, b: 8}}]` — LLM decided to call `add`
+2. `tool_result` with `tool_call_id: "call_123"`, `content: "20"` — tool returned
+3. More `message_chunk` events with `content` — LLM gives the final answer
+
+#### Stream mode: `updates`
+
+Fires once per node execution, summarising what changed in the graph state.
+
+| SSE event | Key fields | When |
+|-----------|------------|------|
+| `node_update` | `node`, `messages[]` (summaries with `type`, `content_preview`, `tool_calls`, `tool_call_id`) | A graph node has finished. Useful for tracking execution order (plan_node → llm_call → tools → llm_call → ...). |
+
+#### Stream mode: `custom`
+
+Fires from `get_stream_writer()` calls inside graph nodes. Free-form dicts for UI status/progress.
+
+| SSE event | Typical fields | When |
+|-----------|---------------|------|
+| `custom` | `status`, `node`, `detail` | Node emits progress. Examples: `{"status": "planning", "node": "plan_node", ...}`, `{"status": "tool_running", "node": "tools", "detail": "Calling add({a: 12, b: 8})"}` |
+
+#### Control events (outside the stream loop)
+
+| SSE event | When |
+|-----------|------|
+| `session` | First event — includes `invocation_id` and `thread_id` |
+| `usage` | After the stream — token usage summary (`input_tokens`, `output_tokens`, `total_tokens`) |
+| `done` | Final event — stream complete |
+| `error` | Exception during graph execution |
+| `cancelled` | Client cancelled the invocation |
+| `approval_required` | *(approval variants only)* Graph hit `interrupt_before=["tools"]` — includes `tool_calls[]` for the client to approve/deny |
+
+#### AG-UI protocol (`mcp_approval_ag-ui` only)
+
+Translates the above into AG-UI events: `RUN_STARTED`, `TEXT_MESSAGE_CONTENT`, `TOOL_CALL_START`, `TOOL_CALL_ARGS`, `TOOL_CALL_END`, `TOOL_CALL_RESULT`, `CUSTOM`, `RUN_FINISHED`, etc.
 
 ## File Structure (each variant)
 
