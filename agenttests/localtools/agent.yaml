@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/AgentSchema/refs/heads/main/schemas/v1.0/ContainerAgent.yaml
+
+kind: hosted
+name: invoketest1-calculator
+description: >
+  LangGraph ReAct calculator agent (plan → llm_call → tools) using the
+  Invocations API protocol with SSE streaming.
+metadata:
+  authors:
+    - Neil
+  tags:
+    - Invocations API
+    - LangGraph
+    - Calculator
+protocols:
+  - protocol: invocations
+    version: v0.0.1
+dockerfile_path: Dockerfile
+resources:
+  cpu: '1'
+  memory: 2Gi
